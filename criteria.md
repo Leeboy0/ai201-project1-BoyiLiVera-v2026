@@ -55,7 +55,10 @@ in at least 4 of 5 tries.
 
 ---
 
-## 4. Something about your chunks
+## 4. All retrieved chunks should be maximum 3 sentences long 
+
+The information needed to answer problems are short so no unrelevant sentences
+in the answers.
 
 <!-- YOU WRITE THIS ONE.
 
