@@ -53,44 +53,58 @@
 
      Milestone 3. -->
 
-**Chunk 1** — source: `` — produced by: ``
+**Chunk 1** — source: health_center.txt#0 — produced by: chunker.py::split_documents
 
-```
-```
 
-**Chunk 2** — source: `` — produced by: ``
+The health centre 
 
-```
-```
+Walk-in hours are 8am to 11am; everything after that is by appointment and appointments run about a week out. If something is urgent, go at 8am and wait rather than booking. Counselling is separate, in the same building, and has its own intake process with a shorter wait than people expect — usually three or four days for a first session.
 
-**Chunk 3** — source: `` — produced by: ``
 
-```
-```
+**Chunk 2** — source: course_cs_340.txt#0 — produced by: chunker.py::split_documents
 
-**Chunk 4** — source: `` — produced by: ``
 
-```
-```
+CS 340 Databases
 
-**Chunk 5** — source: `` — produced by: ``
+I'm a junior and I've done this twice now. Format is lecture twice a week plus a project that runs the whole term. Assessment: one midterm and a final, both open-book.
 
-```
-```
+
+**Chunk 3** — source: dining_halden_hall.txt#0 — produced by: chunker.py::split_documents
+
+
+Halden Hall
+
+I lived here my sophomore year. Wait times: rarely more than 8 minutes, even at noon. The thing worth going for is soup rotation, and the bread is baked on site.
+
+
+**Chunk 4** — source: health_center.txt#0 — produced by: chunker.py::split_documents
+
+The health centre
+
+Walk-in hours are 8am to 11am; everything after that is by appointment and appointments run about a week out. If something is urgent, go at 8am and wait rather than booking. Counselling is separate, in the same building, and has its own intake process with a shorter wait than people expect — usually three or four days for a first session.
+
+
+**Chunk 5** — source: housing_morrow_house_laundry.txt#0 — produced by: chunker.py::split_documents
+
+
+Laundry in Morrow House
+
+Machines take $1.50 wash, $1.25 dry, coin or card. There are eight washers and six dryers for the building, which is the wrong ratio and means the dryers back up on Sunday evenings. Best time to do laundry here is Tuesday or Wednesday morning.
+
 
 ## Sample Answer
 
 <!-- One complete question and answer, pasted as text, with the source line
      visible. Milestone 4. -->
 
-**Question:**
+**Question:** How many black-and-white pages can a student print with their printing quota each semester?
 
-**Answer:**
+**Answer:** A student can print roughly 600 black-and-white pages per semester with their printing quota.
 
 ```
 ```
 
-**My relevance cutoff:**
+**My relevance cutoff:** 0.55
 
 <!-- The number you set in config.py, and how you got there.
 
@@ -116,9 +130,9 @@
 
      Milestone 5. -->
 
-**1.**
+**1.** I used AI to help me understand the code snippet and how to modify them based on my terminal outputs and requirements. 
 
-**2.**
+**2.** I used AI to learn concepts related to RAG and AI systems. 
 
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
