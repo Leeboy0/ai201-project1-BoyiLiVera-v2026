@@ -55,10 +55,11 @@ in at least 4 of 5 tries.
 
 ---
 
-## 4. All retrieved chunks should be maximum 3 sentences long 
+## 4. Chunk size should be limited
 
-The information needed to answer problems are short so no unrelevant sentences
-in the answers.
+Each retrieved chunk for each of my 5 questions should be at most 3 sentences
+long — 15 chunks at `TOP_K = 3`, and all 15 have to hold. The information
+needed to answer my questions is short, so 3 sentences are enough.
 
 <!-- YOU WRITE THIS ONE.
 
@@ -76,11 +77,24 @@ in the answers.
 
 **Why this target:**
 
+I require this of every retrieved chunk rather than most of them because chunk
+size should be consistent across all answers: if one question is answered from
+a 3-sentence chunk and another from a 12-sentence one, the two answers are
+working from different amounts of context and I cannot compare them. The
+number came from reading the corpus in Milestone 3 — the documents are short
+forum-style posts, 178 to 549 characters, and one post covers one topic, so 3
+sentences is about one whole thought.
 
 
 ---
 
-## 5. Your choice
+## 5. The retrieve should be fast
+
+Every one of my 5 questions returns a complete answer in under 20 seconds end
+to end, on all three runs — 15 of 15. Time is measured from the question going
+in to the answer coming back with the response cache off, and excludes any
+rate-limit pause, because `generate.py` prints when it is waiting and that
+wait is the limiter doing its job rather than my pipeline being slow.
 
 <!-- YOU WRITE THIS ONE TOO.
 
@@ -90,11 +104,17 @@ in the answers.
      present — anything, as long as it names a number or an observable
      outcome. -->
 
-
-
 **Why this target:**
 
-
+20 seconds is the point where I would rather see an error than keep waiting,
+and it is loose enough that missing it means something is actually wrong
+rather than that the network had a bad moment. I care about this one because
+the two stages behind it are very unequal, and the target tells me which is at
+fault: retrieval runs locally and `measure_latency.py` puts it at about 0.02
+seconds per question, so effectively the whole 20-second budget belongs to the
+single API call in `generate.py`. If this criterion ever misses, the cause is
+generation or the network and never retrieval — which makes it a criterion I
+can diagnose rather than merely fail.
 
 ---
 

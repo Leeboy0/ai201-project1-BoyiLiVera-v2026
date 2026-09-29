@@ -149,27 +149,121 @@ Machines take $1.50 wash, $1.25 dry, coin or card. There are eight washers and s
 
 ## Run Log — Before
 
-<!-- Your five criteria, three runs each. `python run_eval.py --label before`
-     runs the questions, puts the OUT_OF_SCOPE ones through the gate, and
-     writes it all into results/ for you. Targets come from criteria.md; the
-     verdict column is your call.
-
-     Criterion 3 is measured in one deterministic pass rather than three, so
-     the same number goes in all three run columns. That's correct, not lazy.
-
-     Milestone 1. -->
+Corpus `campus_life`, top-k 3, relevance cutoff 0.55. Run log:
+[results/run_2026-09-23_1613_before.md](results/run_2026-09-23_1613_before.md),
+produced by `run_eval.py::main`.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1. Retrieved chunk contains the answer | 4 of 5 |  |  |  |  |
-| 2. Every answer names a source | 5 of 5 |  |  |  |  |
-| 3. Gate stops out-of-corpus questions | 4 of 5 |  |  |  |  |
-| 4. | | | | | |
-| 5. | | | | | |
+| 1. Retrieved chunk contains the answer | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. Chunk size should be limited | 15 of 15 | 15/15 | 15/15 | 15/15 | MET |
+| 5. Answer comes back under 20 seconds | 15 of 15 |  |  |  |  |
 
-<!-- Underneath, paste the REAL output for each criterion from one of your
-     runs — the actual text your system produced, not a description of it.
-     Name the file and function that produced it. -->
+Three of these come out identical in all three columns, and that is correct
+rather than lazy for the same reason the brief gives for criterion 3.
+Criteria 1 and 4 are properties of **retrieval and chunking**, not of the
+generated answer: `store.py::search` is deterministic and so is counting
+sentences, so one pass is the whole measurement. Criterion 2 is the only one
+here that depends on what the model wrote, and criterion 5 is the only one
+that can drift between runs for reasons outside my code.
+
+The three runs really were three runs. Two of the five questions came back
+with textually different answers across them, which a cached result could not
+do — `run_eval.py:67` passes `cache=False` on purpose:
+
+```
+Q5 run 1: The maximum is 20 hours a week during term (source: money_jobs.txt).
+Q5 run 2: The maximum is 20 hours a week during term (money_jobs.txt).
+```
+
+### Criterion 1 — retrieved chunk contains the answer
+
+Retrieval by `store.py::search`, printed by `app.py::cmd_retrieve`. The
+answer-bearing chunk comes back at rank 1 for all five questions; this is the
+hardest of the five, because three other buildings have near-identical laundry
+documents and one of them charges the same $1.50:
+
+```
+Question: How much is a wash cost for Morrow house?
+
+#   distance   source                           preview
+----------------------------------------------------------------------------------------------------
+1   0.2504     housing_morrow_house_laundry.txt Laundry in Morrow House  Machines take $1.50 wash, $...
+2   0.3501     housing_morrow_house.txt         The good: cheapest housing tier by about $900 a year...
+3   0.4264     housing_innisfree_hall_laundry.txt Laundry in Innisfree Hall  Machines take $1.75 wash,...
+
+Gate: best distance 0.250 is under the 0.55 cutoff
+```
+
+### Criterion 2 — every answer names a source
+
+Written by `generate.py::answer_from_chunks`, logged by
+`run_eval.py::write_report`. All 15 answers name a retrieved filename;
+`scorer.py::names_a_source` is what I check it with:
+
+```
+### How many black-and-white pages can a student print with their printing quota each semester? — run 1
+
+- Best distance: 0.1926 (passed the gate)
+- Sources retrieved: admin_printing_quota.txt, money_textbooks.txt, study_group_rooms.txt
+
+A student can print roughly 600 black-and-white pages per semester with their printing quota.
+
+Source: admin_printing_quota.txt
+```
+
+### Criterion 3 — the gate stops out-of-corpus questions
+
+Produced by `run_eval.py::check_out_of_scope`, cutoff 0.55:
+
+```
+| Out-of-scope question | Best distance | Gate |
+|---|---|---|
+| What is the capital of Mongolia? | 0.824 | refused |
+| How do I change the oil in a diesel engine? | 0.849 | refused |
+| Who won the 1994 World Cup? | 0.874 | refused |
+| What is the recommended dosage of ibuprofen for a headache? | 0.833 | refused |
+| How do I write a for loop in Rust? | 0.871 | refused |
+```
+
+### Criterion 4 — chunk size should be limited
+
+Produced by `check_chunks.py::main`, chunks from
+`chunker.py::split_documents`, retrieval by `store.py::search`:
+
+```
+Q4: How much is a wash cost for Morrow house?
+   #1  3 sentence(s)   268 chars  housing_morrow_house_laundry.txt
+   #2  3 sentence(s)   225 chars  housing_morrow_house.txt
+   #3  3 sentence(s)   267 chars  housing_innisfree_hall_laundry.txt
+
+-> 15 of 15 retrieved chunks are at most 3 sentences
+```
+
+Across the whole index, `python check_chunks.py --all` reports
+`141 chunks in the index · longest 3 sentences · 0 over 3`.
+
+### Criterion 5 — answer comes back under 20 seconds
+
+Produced by `measure_latency.py::main`. Retrieval alone, which costs no model
+calls:
+
+```
+Run 1
+  Q1  retrieval  0.481s
+  Q2  retrieval  0.019s
+  Q3  retrieval  0.017s
+  Q4  retrieval  0.021s
+  Q5  retrieval  0.021s
+  -> 5 of 5 under 20s (slowest 0.481s, median 0.021s)
+```
+
+<!-- TODO: run `python measure_latency.py` (15 model calls) to get the
+     end-to-end numbers, then fill the three Run cells and the verdict for
+     criterion 5 above. Q1's 0.481s is the embedding model loading on first
+     use; every call after it is ~0.02s. -->
 
 ## Verdicts
 
