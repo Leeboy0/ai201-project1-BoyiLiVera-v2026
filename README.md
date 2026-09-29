@@ -159,7 +159,7 @@ produced by `run_eval.py::main`.
 | 2. Every answer names a source | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
 | 3. Gate stops out-of-corpus questions | 4 of 5 | 5/5 | 5/5 | 5/5 | MET |
 | 4. Chunk size should be limited | 15 of 15 | 15/15 | 15/15 | 15/15 | MET |
-| 5. Answer comes back under 20 seconds | 15 of 15 |  |  |  |  |
+| 5. Answer comes back under 20 seconds | 15 of 15 | 4/5 | 4/5 | 5/5 | MISSED |
 
 Three of these come out identical in all three columns, and that is correct
 rather than lazy for the same reason the brief gives for criterion 3.
@@ -245,44 +245,77 @@ Q4: How much is a wash cost for Morrow house?
 Across the whole index, `python check_chunks.py --all` reports
 `141 chunks in the index · longest 3 sentences · 0 over 3`.
 
+I revised this criterion in unit 2 — see criteria.md. The original passes
+because `chunker.py::split_documents` sets `max_sentences = 3`, so no chunk it
+produces can violate it. The revised version asks whether a chunk names the
+subject of the document it came from, and that one misses.
+`python check_chunks.py --subject`:
+
+```
+141 chunks · 49 never name their document's subject
+
+  course_cs_210.txt  heading='CS 210 Data Structures'
+    chunk 1: Midterms are curved, the final is not. Expect 8 to 10 hours a week outsi...
+
+-> 92 of 141 chunks in the index name their subject
+-> 13 of 15 RETRIEVED chunks name their subject
+```
+
+The two retrieved chunks that fail are `transit_shuttle.txt` chunk 1 (rank 2
+for Q2) and `housing_morrow_house.txt` chunk 1 (rank 2 for Q4). The second one
+matters: it reads "The good: cheapest housing tier by about $900 a year ...
+Laundry costs $1.50 wash" with the words "Morrow House" nowhere in it, so a
+price arrives at the model with no building attached to it.
+
 ### Criterion 5 — answer comes back under 20 seconds
 
-Produced by `measure_latency.py::main`. Retrieval alone, which costs no model
-calls:
+Produced by `measure_latency.py::main`, three runs, cache off, retrieval and
+generation timed separately:
 
 ```
 Run 1
-  Q1  retrieval  0.481s
-  Q2  retrieval  0.019s
-  Q3  retrieval  0.017s
-  Q4  retrieval  0.021s
-  Q5  retrieval  0.021s
-  -> 5 of 5 under 20s (slowest 0.481s, median 0.021s)
+  Q1  retrieval  0.442s  generation 24.879s  total 25.322s  ** OVER TARGET **
+  Q2  retrieval  0.044s  generation  0.956s  total  1.000s
+  Q3  retrieval  0.028s  generation  0.582s  total  0.610s
+  Q4  retrieval  0.025s  generation  0.730s  total  0.755s
+  Q5  retrieval  0.022s  generation  0.511s  total  0.533s
+  -> 4 of 5 under 20s (slowest 25.322s, median 0.755s)
+
+Run 2
+  Q1  retrieval  0.021s  generation  0.631s  total  0.652s
+  Q2  retrieval  0.021s  generation  1.091s  total  1.112s
+  Q3  retrieval  0.021s  generation  0.905s  total  0.925s
+  Q4  retrieval  0.021s  generation  1.271s  total  1.293s
+  Q5  retrieval  0.023s  generation 23.395s  total 23.418s  ** OVER TARGET **
+  -> 4 of 5 under 20s (slowest 23.418s, median 1.112s)
+
+Run 3
+  Q1  retrieval  0.052s  generation  0.785s  total  0.838s
+  Q2  retrieval  0.024s  generation  3.203s  total  3.228s
+  Q3  retrieval  0.020s  generation  0.919s  total  0.939s
+  Q4  retrieval  0.021s  generation  0.574s  total  0.594s
+  Q5  retrieval  0.020s  generation  0.402s  total  0.422s
+  -> 5 of 5 under 20s (slowest 3.228s, median 0.838s)
 ```
 
-<!-- TODO: run `python measure_latency.py` (15 model calls) to get the
-     end-to-end numbers, then fill the three Run cells and the verdict for
-     criterion 5 above. Q1's 0.481s is the embedding model loading on first
-     use; every call after it is ~0.02s. -->
+13 of 15 under 20 seconds, so this one misses. Both failures are in
+generation, never retrieval: the two offenders spent 24.879s and 23.395s
+inside `generate.py::answer_from_chunks` while retrieval in the same call took
+0.442s and 0.023s. Neither was a rate-limit pause, which my criterion
+excludes — `generate.py` prints `[rate limit]` to stderr on both its pacing
+path and its retry path, stderr was captured, and nothing printed.
 
 ## Verdicts
 
-<!-- MET or MISSED for each of the five, against the target you wrote last
-     unit — not a new one. Plus a sentence on how you decided. That sentence
-     matters most where it was close.
-
-     If your target said 4 of 5 and your runs came out 4, 3, 4, that's a MISS.
-     The target has to hold, not show up occasionally.
-
-     Milestone 2. -->
+Against the targets I wrote in unit 1, not new ones.
 
 | # | Criterion | Verdict | How I decided |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
-| 4 |  |  |  |
-| 5 |  |  |  |
+| 1 | Retrieved chunk contains the answer (4 of 5) | MET | The chunk holding the answer came back at rank 1 for all five questions, so 5/5 clears the 4/5 target with a whole rank to spare. Measured against chunk text rather than against the answer, because this criterion is about retrieval — `scorer.py::judge` grades the answer and would have been the wrong instrument. |
+| 2 | Every answer names a source (5 of 5) | MET | All 15 answers name a filename that was actually retrieved, checked with `scorer.py::names_a_source` rather than by eye. Not close: the failure mode would be an answer naming no file at all, and none did. |
+| 3 | Gate stops out-of-corpus questions (4 of 5) | MET | All five out-of-scope questions were refused, and not narrowly — the closest was 0.824 against a 0.55 cutoff, so the nearest miss had 0.27 of margin. This is the least fragile of the five. |
+| 4 | Chunk size should be limited (15 of 15) | MET | All 15 retrieved chunks are at most 3 sentences. I am calling it MET because that is what the target said, but the honest reading is that it could not have gone any other way: `chunker.py::split_documents` enforces the limit in code. That is why I revised it in criteria.md, and the revised version — every retrieved chunk names its document's subject — comes out 13 of 15 and MISSES. |
+| 5 | Answer comes back under 20 seconds (15 of 15) | MISSED | 4/5, 4/5, 5/5 — 13 of 15. My target was every question on every run, and two calls blew it at 24.879s and 23.395s, so a target that has to hold does not hold. It would have been MET at a 4-of-5 target, which is exactly the kind of "shows up occasionally" the brief warns against, so it stays a miss. |
 
 ## Diagnoses
 

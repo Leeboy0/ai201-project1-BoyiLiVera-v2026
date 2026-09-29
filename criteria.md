@@ -85,6 +85,21 @@ number came from reading the corpus in Milestone 3 — the documents are short
 forum-style posts, 178 to 549 characters, and one post covers one topic, so 3
 sentences is about one whole thought.
 
+> **Revised in unit 2:** For all 5 of my questions, every retrieved chunk
+> names the subject of the document it came from — 15 of 15 at `TOP_K = 3`.
+>
+> **Why revised:** The original criterion measured my own configuration
+> rather than anything about the chunks. `chunker.py::split_documents` sets
+> `max_sentences = 3` and batches sentences in groups of three, so no chunk it
+> produces can ever be longer than 3 sentences and the criterion cannot fail —
+> it restates the code instead of testing it. What I actually wanted to know
+> when I picked 3 sentences was whether a chunk stands on its own as a unit of
+> meaning, and that is something I can count: my chunker uses no overlap and
+> each document's subject appears only in its heading, so every chunk after
+> the first has to name its subject in its own prose or it doesn't name it at
+> all. `check_chunks.py --subject` counts them. The original line stays above
+> because 3 sentences is still the size I chose and why.
+
 
 ---
 
