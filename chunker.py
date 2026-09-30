@@ -102,10 +102,23 @@ def split_documents(documents: list[Document]) -> list[Chunk]:
 
     for doc in documents:
         sentences = split_into_sentences(doc.text)
+        heading = document_heading(doc.text)
         index = 0
         for i in range(0, len(sentences), max_sentences):
             batch = sentences[i : i + max_sentences]
             text = " ".join(batch)
+
+            # UNIT 2 IMPROVEMENT. Every chunk after the first used to lose the
+            # document's subject: the heading is part of the first sentence,
+            # these batches do not overlap, so chunk 1 of
+            # housing_morrow_house.txt read "... Laundry costs $1.50 wash"
+            # with the words "Morrow House" nowhere in it. Three other
+            # buildings have near-identical laundry documents and one charges
+            # the same $1.50, so a price arrived at the model with no building
+            # attached. Prefixing the heading puts the subject back into every
+            # chunk it was missing from.
+            if index > 0 and heading:
+                text = f"{heading}\n{text}"
 
             chunks.append(
                 Chunk(
@@ -117,6 +130,20 @@ def split_documents(documents: list[Document]) -> list[Chunk]:
             )
             index += 1
     return chunks
+
+
+def document_heading(text: str) -> str:
+    """
+    The document's subject: its first line.
+
+    Every document in this corpus opens with one — "Laundry in Morrow House",
+    "CS 210 Data Structures". A line that already ends in a full stop is a
+    sentence rather than a heading, so it is not treated as one.
+    """
+    first = text.strip().split("\n")[0].strip()
+    if not first or first.endswith((".", "!", "?")) or len(first) > 80:
+        return ""
+    return first
 
 def split_into_sentences(text: str) -> list[str]:
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
